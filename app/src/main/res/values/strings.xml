@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meshly3D</string>
+    <string name="gl_info_fmt">%1$s</string>
+</resources>
