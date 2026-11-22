@@ -51,5 +51,8 @@ object NativeBridge {
     external fun touchCancel()
 
     external fun stats(): String
+
+    /** "V F Edges T Sel Undo" numbers separated by spaces. */
+    external fun meshInfo(): String
     external fun glInfo(): String
 }

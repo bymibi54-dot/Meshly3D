@@ -52,6 +52,8 @@ public:
     void touchCancel();
 
     std::string stats() const;
+    /** "V F E T Sel Undo" as plain numbers separated by spaces (for the UI panels). */
+    std::string meshInfo() const;
     const std::string& info() const { return info_; }
 
 private:

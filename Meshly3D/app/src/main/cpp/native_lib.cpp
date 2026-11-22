@@ -60,6 +60,10 @@ JNIEXPORT jstring JNICALL Java_com_meshly3d_app_NativeBridge_stats(JNIEnv* env, 
     return toJString(env, g_renderer.stats());
 }
 
+JNIEXPORT jstring JNICALL Java_com_meshly3d_app_NativeBridge_meshInfo(JNIEnv* env, jobject) {
+    return toJString(env, g_renderer.meshInfo());
+}
+
 JNIEXPORT jstring JNICALL Java_com_meshly3d_app_NativeBridge_glInfo(JNIEnv* env, jobject) {
     return toJString(env, g_renderer.info());
 }

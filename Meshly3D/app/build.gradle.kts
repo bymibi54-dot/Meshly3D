@@ -12,8 +12,8 @@ android {
         applicationId = "com.meshly3d.app"
         minSdk = 29            // Android 10+
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0-m2"
+        versionCode = 5
+        versionName = "0.2.1-m2-ui"
 
         ndk {
             abiFilters += listOf("arm64-v8a")   // M0: arm64 only (faster builds)

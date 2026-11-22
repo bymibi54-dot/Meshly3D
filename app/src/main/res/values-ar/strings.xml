@@ -1,27 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Meshly3D</string>
-    <string name="btn_open">فتح GLB</string>
-    <string name="btn_cube">مكعب</string>
-    <string name="btn_frame">توسيط</string>
-    <string name="msg_loading">جارٍ التحميل…</string>
-    <string name="msg_read_failed">تعذّرت قراءة الملف</string>
-    <string name="msg_cube">المكعب الافتراضي</string>
+    <string name="title_bar">Meshly3D M2</string>
 
-    <string name="mode_object">مجسم</string>
-    <string name="mode_edit">تعديل</string>
-    <string name="elem_vertex">نقطة</string>
-    <string name="elem_edge">حافة</string>
-    <string name="elem_face">وجه</string>
-    <string name="method_tap">لمس</string>
-    <string name="method_box">مربع</string>
-    <string name="method_lasso">لاسو</string>
-    <string name="sel_add">إضافة</string>
+    <string name="mode_object">وضع المجسم</string>
+    <string name="mode_edit">وضع التعديل</string>
+
+    <string name="tool_select">تحديد</string>
     <string name="tool_move">تحريك</string>
     <string name="tool_rotate">تدوير</string>
     <string name="tool_scale">تكبير</string>
+    <string name="elem_vertex">نقطة</string>
+    <string name="elem_edge">حافة</string>
+    <string name="elem_face">وجه</string>
+    <string name="method_box">مربع</string>
+    <string name="method_lasso">لاسو</string>
+    <string name="btn_cube">مكعب</string>
+
+    <string name="btn_open">فتح GLB</string>
+    <string name="btn_frame">توسيط</string>
     <string name="act_undo">تراجع</string>
     <string name="act_redo">إعادة</string>
     <string name="sel_all">الكل</string>
     <string name="sel_none">لا شيء</string>
+    <string name="sel_add">إضافة</string>
+
+    <string name="props_header">&lt;&lt; PROPERTIES</string>
+    <string name="mesh_info">Mesh Info</string>
+    <string name="lbl_v">V</string>
+    <string name="lbl_f">F</string>
+    <string name="lbl_edges">Edges</string>
+    <string name="status_fmt">V %1$s | F %2$s | Sel %3$s | Undo %4$s</string>
+
+    <string name="msg_loading">جارٍ التحميل…</string>
+    <string name="msg_read_failed">تعذّرت قراءة الملف</string>
+    <string name="msg_cube">المكعب الافتراضي</string>
 </resources>

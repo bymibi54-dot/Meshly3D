@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
     r.onDrawFrame();
     CHECK(has(r.info(), "OpenGL ES 3.2"));
     CHECK(has(r.stats(), "V 8 | F 6 | T 12"));
+    CHECK(r.meshInfo() == "8 6 12 12 0 0");  // V F Edges T Sel Undo of the default cube
 
     // ---- Object mode: touches only orbit, nothing is selected
     r.touchDown(400, 300);

@@ -19,14 +19,20 @@ The workflow first runs the C++ unit tests (`tests/`), then builds the APK and c
 - M2 (this version): **Edit mode**. Selection of vertices, edges, faces (tap, box, lasso, add-to-selection),
   gizmo with Move / Rotate / Scale on the X, Y, Z axes, undo / redo of vertex moves, camera-side lighting.
 
-### Using M2
-- Bottom bar: **Object / Edit**, **Undo / Redo**, **Open GLB**, **Cube**, **Frame**.
-- In **Edit** a second row appears: Vertex / Edge / Face, Tap / Box / Lasso, **Add** (toggle: tapping or boxing adds to the
-  selection, tapping a selected element removes it), Move / Rotate / Scale, All / None.
-- Tap selects. With **Box** or **Lasso**, drag on empty space to draw the region. With **Tap**, dragging on empty space orbits.
-- Drag a coloured gizmo handle (round tip on the red X, green Y, blue Z axis) to move / rotate / scale the selection.
-  Rotate: turn your finger around the selection centre. Scale: drag the handle outwards or inwards.
-- Two fingers: pinch to zoom, drag to pan.
+### Using M2 (UI v2, layout from the UI spec)
+- **Top bar:** title "Meshly3D M2" and the **Object Mode / Edit Mode** pills (active = orange `#FF6A00`).
+- **Left toolbar (72 px, 10 tools of 64x64):** Select, Move, Rotate, Scale, Vertex, Edge, Face, Box, Lasso, Cube.
+  The active tool of each group has an orange label: Select / Box / Lasso (how to select), Move / Rotate / Scale (gizmo tool),
+  Vertex / Edge / Face (what to select). They work in Edit Mode only (dimmed in Object Mode). "Cube" puts the default cube back.
+  Below the 10 tools, the actions that already existed stay reachable: Undo, Redo, Open GLB, Frame, All, None, Add
+  (set `SHOW_EXTRA_ACTIONS = false` in `MainActivity.kt` to hide them).
+- **Right panel (280 px):** "<< PROPERTIES" and **Mesh Info** (V / F / Edges, live).
+- **Status bar (32 px):** `V | F | Sel | Undo`, live.
+- Layout numbers are pixels of a 1080-px-wide screen, scaled to the device (`uiScale` in `MainActivity.kt`).
+- Gizmo: drag the round handle on the red X, green Y or blue Z axis (Move, Rotate: turn the finger around the selection, Scale: pull out or in).
+- Select with a tap; with **Box** or **Lasso** drag on empty space. **Add** (toggle): selections are added, tapping a selected element removes it.
+- Two fingers: pinch to zoom, drag to pan. With **Select**, one finger on empty space orbits.
+- Messages (loading, file name, errors) appear as short toasts.
 - Vertices and edges are selectable when they belong to a face that looks towards the camera (hidden back faces are ignored).
 
 ### Tests

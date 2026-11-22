@@ -255,6 +255,13 @@ std::string Renderer::loadGlb(const uint8_t* data, size_t size) {
     return "";
 }
 
+std::string Renderer::meshInfo() const {
+    std::ostringstream os;
+    os << mesh_.vertexCount() << ' ' << mesh_.faceCount() << ' ' << edit_.topology().edgeCount() << ' '
+       << mesh_.triangleCount() << ' ' << edit_.selectedCount() << ' ' << edit_.undoCount();
+    return os.str();
+}
+
 std::string Renderer::stats() const {
     std::ostringstream os;
     os << "V " << mesh_.vertexCount() << " | F " << mesh_.faceCount() << " | T " << mesh_.triangleCount();
@@ -622,7 +629,7 @@ void Renderer::drawRegion() {
 }
 
 void Renderer::onDrawFrame() {
-    glClearColor(0.10f, 0.10f, 0.12f, 1.0f);
+    glClearColor(0.102f, 0.102f, 0.102f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (!meshProg_ || !lineProg_ || !pointProg_) return;
     rebuildIfDirty();
@@ -637,7 +644,7 @@ void Renderer::onDrawFrame() {
     glUseProgram(lineProg_);
     glUniformMatrix4fv(uLineMvp_, 1, GL_FALSE, mvp);
     glBindVertexArray(grid_.vao);
-    glUniform4f(uLineColor_, 0.22f, 0.22f, 0.26f, 1.0f);
+    glUniform4f(uLineColor_, 0.24f, 0.24f, 0.24f, 1.0f);
     glDrawArrays(GL_LINES, 0, gridVerts_);
     glUniform4f(uLineColor_, 0.75f, 0.28f, 0.28f, 1.0f);  // X red
     glDrawArrays(GL_LINES, gridVerts_, 2);
@@ -666,7 +673,7 @@ void Renderer::onDrawFrame() {
     glDrawArrays(GL_LINES, 0, wire_.count);
 
     if (editMode_) {
-        const float orange[4] = {1.0f, 0.60f, 0.10f, 1.0f};
+        const float orange[4] = {1.0f, 0.416f, 0.0f, 1.0f};  // accent #FF6A00
         // Selected faces: translucent fill.
         if (selFaces_.count > 0) {
             glEnable(GL_BLEND);

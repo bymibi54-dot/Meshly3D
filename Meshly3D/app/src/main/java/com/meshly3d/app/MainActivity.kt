@@ -3,57 +3,90 @@ package com.meshly3d.app
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Intent
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+
+// ---- Palette (see the UI spec)
+private val C_BG = 0xFF1A1A1A.toInt()          // viewport
+private val C_BAR = 0xFF242424.toInt()         // top bar
+private val C_TOOLBAR = 0xFF1E1E1E.toInt()     // left toolbar
+private val C_RIGHT = 0xFF222222.toInt()       // right panel
+private val C_STATUS = 0xFF111111.toInt()      // status bar
+private val C_DIVIDER = 0xFF333333.toInt()
+private val C_ORANGE = 0xFFFF6A00.toInt()      // accent
+private val C_WHITE = 0xFFFFFFFF.toInt()
+private val C_SECONDARY = 0xFFB0B0B0.toInt()
+private val C_PILL_OFF = 0xFFD0D0D0.toInt()
+private val C_DARK_TEXT = 0xFF1A1A1A.toInt()
+
+/**
+ * Set to false to show ONLY the 10 tools of the spec in the left toolbar.
+ * With true, the actions that already existed (Undo, Redo, Open GLB, Frame, All, None, Add) stay reachable
+ * below the 10 tools; without them a GLB can not be opened and a move can not be undone.
+ */
+private const val SHOW_EXTRA_ACTIONS = true
 
 class MainActivity : Activity() {
 
     private lateinit var glView: MeshGLView
-    private lateinit var infoText: TextView
     private lateinit var reportScroll: ScrollView
     private lateinit var reportText: TextView
-    private lateinit var editScroll: HorizontalScrollView
+    private lateinit var statusText: TextView
+    private lateinit var valueV: TextView
+    private lateinit var valueF: TextView
+    private lateinit var valueE: TextView
+    private lateinit var pillObject: TextView
+    private lateinit var pillEdit: TextView
 
-    private lateinit var modeChips: List<Button>
-    private lateinit var elemChips: List<Button>
-    private lateinit var methodChips: List<Button>
-    private lateinit var toolChips: List<Button>
-    private lateinit var extendChip: Button
+    private lateinit var tSelect: Tile
+    private lateinit var tBox: Tile
+    private lateinit var tLasso: Tile
+    private lateinit var tMove: Tile
+    private lateinit var tRotate: Tile
+    private lateinit var tScale: Tile
+    private lateinit var tVertex: Tile
+    private lateinit var tEdge: Tile
+    private lateinit var tFace: Tile
+    private var tAdd: Tile? = null
+
+    private val editOnlyTiles = mutableListOf<Tile>()
+    private var editOn = false
     private var extendOn = false
 
-    // Lines of the info overlay (top-left).
-    private var headerLine = ""
-    private var glLine = ""
-    private var statsLine = ""
-    private var messageLine = ""
+    /** Layout numbers in the spec are pixels of a 1080-px-wide screen; scale them to this device. */
+    private val uiScale: Float by lazy {
+        val dm = resources.displayMetrics
+        minOf(dm.widthPixels, dm.heightPixels) / 1080f
+    }
+
+    private fun px(v: Int): Int = maxOf(1, (v * uiScale + 0.5f).toInt())
+
+    private val bold: Typeface = Typeface.create("sans-serif", Typeface.BOLD)
+
+    // ================================================================== UI building
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         CrashHandler.install(this)
 
-        headerLine = "Meshly3D M2 · Android ${Build.VERSION.RELEASE} · ${Build.SUPPORTED_ABIS.firstOrNull() ?: "?"}"
-
         glView = MeshGLView(this)
-        infoText = TextView(this).apply {
-            setTextColor(0xFFB8BCC8.toInt())
-            textSize = 12f
-            setPadding(24, 24, 24, 24)
-        }
         reportText = TextView(this).apply {
             setTextColor(0xFFFFB4A8.toInt())
             textSize = 11f
@@ -70,80 +103,30 @@ class MainActivity : Activity() {
             addView(reportText)
         }
 
-        // ---------------------------------------------------------------- bottom bars
-        // Row 1 (Edit mode only): what to select, how to select, which tool.
-        val editRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val elemList = listOf(
-            chip(R.string.elem_vertex) { setElement(0) },
-            chip(R.string.elem_edge) { setElement(1) },
-            chip(R.string.elem_face) { setElement(2) }
-        )
-        val methodList = listOf(
-            chip(R.string.method_tap) { setMethod(0) },
-            chip(R.string.method_box) { setMethod(1) },
-            chip(R.string.method_lasso) { setMethod(2) }
-        )
-        extendChip = chip(R.string.sel_add) { toggleExtend() }
-        val toolList = listOf(
-            chip(R.string.tool_move) { setTool(0) },
-            chip(R.string.tool_rotate) { setTool(1) },
-            chip(R.string.tool_scale) { setTool(2) }
-        )
-        elemChips = elemList
-        methodChips = methodList
-        toolChips = toolList
-        for (b in elemList) addChip(editRow, b)
-        addSpacer(editRow)
-        for (b in methodList) addChip(editRow, b)
-        addChip(editRow, extendChip)
-        addSpacer(editRow)
-        for (b in toolList) addChip(editRow, b)
-        addSpacer(editRow)
-        addChip(editRow, chip(R.string.sel_all) { runOnGl { NativeBridge.selectAll() } })
-        addChip(editRow, chip(R.string.sel_none) { runOnGl { NativeBridge.selectNone() } })
-        editScroll = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            visibility = View.GONE
-            addView(editRow)
-        }
-
-        // Row 2 (always): mode, undo / redo, file and camera actions.
-        val actionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val modeList = listOf(
-            chip(R.string.mode_object) { setEditMode(false) },
-            chip(R.string.mode_edit) { setEditMode(true) }
-        )
-        modeChips = modeList
-        for (b in modeList) addChip(actionRow, b)
-        addSpacer(actionRow)
-        addChip(actionRow, chip(R.string.act_undo) { runOnGl { NativeBridge.undo() } })
-        addChip(actionRow, chip(R.string.act_redo) { runOnGl { NativeBridge.redo() } })
-        addSpacer(actionRow)
-        addChip(actionRow, chip(R.string.btn_open) { openGlbPicker() })
-        addChip(actionRow, chip(R.string.btn_cube) {
-            runOnGl { NativeBridge.resetCube() }
-            showMessage(getString(R.string.msg_cube))
-        })
-        addChip(actionRow, chip(R.string.btn_frame) { runOnGl { NativeBridge.frame() } })
-        val actionScroll = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(actionRow)
-        }
-
-        val bottom = LinearLayout(this).apply {
+        val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xFF1A1A1F.toInt())
-            addView(editScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-            addView(actionScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            setBackgroundColor(C_BG)
+            layoutDirection = View.LAYOUT_DIRECTION_LTR   // the toolbar stays on the left, also in Arabic
         }
+        column.addView(buildTopBar(), LinearLayout.LayoutParams(MATCH_PARENT, px(112)))
+
+        val middle = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        middle.addView(buildLeftToolbar(), LinearLayout.LayoutParams(px(72), MATCH_PARENT))
+        middle.addView(glView, LinearLayout.LayoutParams(0, MATCH_PARENT, 1f))
+        middle.addView(buildRightPanel(), LinearLayout.LayoutParams(px(280), MATCH_PARENT))
+        column.addView(middle, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+
+        statusText = TextView(this).apply {
+            setTextColor(C_SECONDARY)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(px(12), 0, px(12), 0)
+            setBackgroundColor(C_STATUS)
+        }
+        column.addView(statusText, LinearLayout.LayoutParams(MATCH_PARENT, px(32)))
 
         val root = FrameLayout(this)
-        root.addView(glView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        root.addView(
-            infoText,
-            FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.TOP or Gravity.START)
-        )
-        root.addView(bottom, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT, Gravity.BOTTOM))
+        root.addView(column, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         root.addView(reportScroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(root)
 
@@ -152,19 +135,14 @@ class MainActivity : Activity() {
             reportText.text = report + "\n(tap to close)"
             reportScroll.visibility = View.VISIBLE
         }
-        renderInfo()
+        applyInfo("0 0 0 0 0 0")
 
         glView.setRenderer(object : GLSurfaceView.Renderer {
             override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
                 if (!NativeBridge.ok) return
                 NativeBridge.onSurfaceCreated()
-                val gpu = NativeBridge.glInfo()
-                val stats = NativeBridge.stats()
-                this@MainActivity.runOnUiThread {
-                    glLine = gpu
-                    statsLine = stats
-                    renderInfo()
-                }
+                val info = NativeBridge.meshInfo()
+                this@MainActivity.runOnUiThread { applyInfo(info) }
             }
 
             override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -177,15 +155,16 @@ class MainActivity : Activity() {
         })
         // Draw only when something changes (no animation, saves battery).
         glView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
-        glView.onGestureEnd = { runOnGl { } }   // refresh the counters after every gesture
+        glView.onGestureEnd = { runOnGl { } }   // refresh the numbers after every gesture
 
-        // Initial state (Object mode, vertex select, tap, move tool).
+        // Initial state: Object Mode, Select (tap), Move, Vertex.
+        stylePill(pillObject, true)
+        stylePill(pillEdit, false)
+        setMethodTiles(0)
+        setToolTiles(0)
+        setElementTiles(0)
+        for (t in editOnlyTiles) t.setDim(true)
         val density = resources.displayMetrics.density
-        select(modeChips, 0)
-        select(elemChips, 0)
-        select(methodChips, 0)
-        select(toolChips, 0)
-        styleChip(extendChip, false)
         runOnGl {
             NativeBridge.setDensity(density)
             NativeBridge.setEditMode(false)
@@ -196,98 +175,264 @@ class MainActivity : Activity() {
         }
     }
 
-    // ------------------------------------------------------------------ small UI helpers
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density + 0.5f).toInt()
-
-    private fun styleChip(b: Button, active: Boolean) {
-        b.setBackgroundColor(if (active) 0xFF3A6EA5.toInt() else 0xFF2A2A30.toInt())
+    private fun buildTopBar(): View {
+        val bar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(C_BAR)
+            setPadding(px(20), 0, px(20), 0)
+        }
+        val title = TextView(this).apply {
+            setText(R.string.title_bar)
+            setTextColor(C_WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            typeface = bold
+            maxLines = 1
+        }
+        bar.addView(title, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        pillObject = pill(R.string.mode_object) { setEditMode(false) }
+        pillEdit = pill(R.string.mode_edit) { setEditMode(true) }
+        val lp1 = LinearLayout.LayoutParams(WRAP_CONTENT, px(52)).apply { rightMargin = px(10) }
+        bar.addView(pillObject, lp1)
+        bar.addView(pillEdit, LinearLayout.LayoutParams(WRAP_CONTENT, px(52)))
+        return bar
     }
 
-    private fun chip(textRes: Int, onClick: () -> Unit): Button {
-        val b = Button(this)
-        b.setText(textRes)
-        b.isAllCaps = false
-        b.textSize = 12f
-        b.minWidth = 0
-        b.minimumWidth = 0
-        b.minHeight = 0
-        b.minimumHeight = 0
-        b.setPadding(dp(14), dp(6), dp(14), dp(6))
-        b.stateListAnimator = null
-        b.setTextColor(0xFFFFFFFF.toInt())
-        b.setOnClickListener { onClick() }
-        styleChip(b, false)
-        return b
+    private fun buildLeftToolbar(): View {
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, px(8), 0, px(8))
+        }
+        // The 10 tools of the spec, in order.
+        tSelect = editTile(ToolIcon.SELECT, R.string.tool_select) { setMethod(0) }
+        tMove = editTile(ToolIcon.MOVE, R.string.tool_move) { setTool(0) }
+        tRotate = editTile(ToolIcon.ROTATE, R.string.tool_rotate) { setTool(1) }
+        tScale = editTile(ToolIcon.SCALE, R.string.tool_scale) { setTool(2) }
+        tVertex = editTile(ToolIcon.VERTEX, R.string.elem_vertex) { setElement(0) }
+        tEdge = editTile(ToolIcon.EDGE, R.string.elem_edge) { setElement(1) }
+        tFace = editTile(ToolIcon.FACE, R.string.elem_face) { setElement(2) }
+        tBox = editTile(ToolIcon.BOX, R.string.method_box) { setMethod(1) }
+        tLasso = editTile(ToolIcon.LASSO, R.string.method_lasso) { setMethod(2) }
+        // Slot 10: the existing "Cube" action (puts the default cube back). The label says Cube on purpose.
+        val tCube = Tile(ToolIcon.CUBE, R.string.btn_cube) {
+            runOnGl { NativeBridge.resetCube() }
+            toast(getString(R.string.msg_cube))
+        }
+        for (t in listOf(tSelect, tMove, tRotate, tScale, tVertex, tEdge, tFace, tBox, tLasso, tCube)) addTile(list, t)
+
+        if (SHOW_EXTRA_ACTIONS) {
+            list.addView(View(this).apply { setBackgroundColor(C_DIVIDER) },
+                LinearLayout.LayoutParams(px(48), px(1)).apply { topMargin = px(6); bottomMargin = px(6) })
+            addTile(list, Tile(ToolIcon.UNDO, R.string.act_undo) { runOnGl { NativeBridge.undo() } })
+            addTile(list, Tile(ToolIcon.REDO, R.string.act_redo) { runOnGl { NativeBridge.redo() } })
+            addTile(list, Tile(ToolIcon.OPEN, R.string.btn_open) { openGlbPicker() })
+            addTile(list, Tile(ToolIcon.FRAME, R.string.btn_frame) { runOnGl { NativeBridge.frame() } })
+            addTile(list, editTile(ToolIcon.ALL, R.string.sel_all) { runOnGl { NativeBridge.selectAll() } })
+            addTile(list, editTile(ToolIcon.NONE, R.string.sel_none) { runOnGl { NativeBridge.selectNone() } })
+            val add = editTile(ToolIcon.ADD, R.string.sel_add) { toggleExtend() }
+            tAdd = add
+            addTile(list, add)
+        }
+
+        return ScrollView(this).apply {
+            setBackgroundColor(C_TOOLBAR)
+            isVerticalScrollBarEnabled = false
+            addView(list, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        }
     }
 
-    private fun addChip(row: LinearLayout, b: Button) {
-        val lp = LinearLayout.LayoutParams(WRAP_CONTENT, dp(40))
-        lp.setMargins(dp(3), dp(3), dp(3), dp(3))
-        row.addView(b, lp)
+    private fun buildRightPanel(): View {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(C_RIGHT)
+            setPadding(px(16), px(16), px(16), px(16))
+        }
+        panel.addView(TextView(this).apply {
+            setText(R.string.props_header)
+            setTextColor(C_ORANGE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = bold
+            maxLines = 1
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        panel.addView(View(this).apply { setBackgroundColor(C_DIVIDER) },
+            LinearLayout.LayoutParams(MATCH_PARENT, px(1)).apply { topMargin = px(10); bottomMargin = px(14) })
+        panel.addView(TextView(this).apply {
+            setText(R.string.mesh_info)
+            setTextColor(C_WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            typeface = bold
+        }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = px(8) })
+
+        valueV = infoRow(panel, R.string.lbl_v)
+        valueF = infoRow(panel, R.string.lbl_f)
+        valueE = infoRow(panel, R.string.lbl_edges)
+        return panel
     }
 
-    private fun addSpacer(row: LinearLayout) {
-        row.addView(View(this), LinearLayout.LayoutParams(dp(10), dp(1)))
+    private fun infoRow(parent: LinearLayout, labelRes: Int): TextView {
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        row.addView(TextView(this).apply {
+            setText(labelRes)
+            setTextColor(C_SECONDARY)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        val value = TextView(this).apply {
+            setTextColor(C_WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            gravity = Gravity.END
+        }
+        row.addView(value, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+        parent.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = px(6) })
+        return value
     }
 
-    private fun select(group: List<Button>, index: Int) {
-        group.forEachIndexed { i, b -> styleChip(b, i == index) }
+    // ------------------------------------------------------------------ tiles and pills
+
+    /** A 64x64 toolbar tile: icon on top, label under it (11sp, shrinks if the word does not fit). */
+    private inner class Tile(kind: Int, textRes: Int, onClick: () -> Unit) {
+        val view = LinearLayout(this@MainActivity)
+        private val icon = ToolIcon(this@MainActivity, kind)
+        private val label = TextView(this@MainActivity)
+
+        init {
+            view.orientation = LinearLayout.VERTICAL
+            view.gravity = Gravity.CENTER_HORIZONTAL
+            view.isClickable = true
+            view.setOnClickListener { onClick() }
+            view.addView(icon, LinearLayout.LayoutParams(px(30), px(30)).apply { topMargin = px(2) })
+            label.setText(textRes)
+            label.gravity = Gravity.CENTER
+            label.maxLines = 1
+            label.includeFontPadding = false
+            label.setAutoSizeTextTypeUniformWithConfiguration(6, 11, 1, TypedValue.COMPLEX_UNIT_SP)
+            view.addView(label, LinearLayout.LayoutParams(MATCH_PARENT, px(28)))
+            setActive(false)
+        }
+
+        fun setActive(active: Boolean) {
+            label.setTextColor(if (active) C_WHITE else C_SECONDARY)
+            icon.tint = if (active) C_WHITE else C_SECONDARY
+            if (active) {
+                label.background = GradientDrawable().apply {
+                    cornerRadius = px(6).toFloat()
+                    setColor(C_ORANGE)
+                }
+            } else {
+                label.background = null
+            }
+        }
+
+        fun setDim(dim: Boolean) {
+            view.alpha = if (dim) 0.35f else 1f
+        }
+    }
+
+    private fun addTile(parent: LinearLayout, t: Tile) {
+        parent.addView(t.view, LinearLayout.LayoutParams(px(64), px(64)).apply {
+            topMargin = px(3)
+            bottomMargin = px(3)
+        })
+    }
+
+    /** A tile that only works in Edit Mode (dimmed and ignored in Object Mode). */
+    private fun editTile(kind: Int, textRes: Int, action: () -> Unit): Tile {
+        val t = Tile(kind, textRes) { if (editOn) action() }
+        editOnlyTiles.add(t)
+        return t
+    }
+
+    private fun pill(textRes: Int, onClick: () -> Unit): TextView = TextView(this).apply {
+        setText(textRes)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        typeface = bold
+        gravity = Gravity.CENTER
+        maxLines = 1
+        setPadding(px(26), 0, px(26), 0)
+        setOnClickListener { onClick() }
+    }
+
+    private fun stylePill(t: TextView, active: Boolean) {
+        t.background = GradientDrawable().apply {
+            cornerRadius = px(26).toFloat()
+            setColor(if (active) C_ORANGE else C_PILL_OFF)
+        }
+        t.setTextColor(if (active) C_WHITE else C_DARK_TEXT)
     }
 
     // ------------------------------------------------------------------ editing controls
 
     private fun setEditMode(on: Boolean) {
-        editScroll.visibility = if (on) View.VISIBLE else View.GONE
-        select(modeChips, if (on) 1 else 0)
+        editOn = on
+        stylePill(pillObject, !on)
+        stylePill(pillEdit, on)
+        for (t in editOnlyTiles) t.setDim(!on)
         runOnGl { NativeBridge.setEditMode(on) }
     }
 
-    private fun setElement(e: Int) {
-        select(elemChips, e)
-        runOnGl { NativeBridge.setElement(e) }
+    private fun setMethodTiles(m: Int) {
+        tSelect.setActive(m == 0)
+        tBox.setActive(m == 1)
+        tLasso.setActive(m == 2)
+    }
+
+    private fun setToolTiles(t: Int) {
+        tMove.setActive(t == 0)
+        tRotate.setActive(t == 1)
+        tScale.setActive(t == 2)
+    }
+
+    private fun setElementTiles(e: Int) {
+        tVertex.setActive(e == 0)
+        tEdge.setActive(e == 1)
+        tFace.setActive(e == 2)
     }
 
     private fun setMethod(m: Int) {
-        select(methodChips, m)
+        setMethodTiles(m)
         runOnGl { NativeBridge.setMethod(m) }
     }
 
     private fun setTool(t: Int) {
-        select(toolChips, t)
+        setToolTiles(t)
         runOnGl { NativeBridge.setTool(t) }
+    }
+
+    private fun setElement(e: Int) {
+        setElementTiles(e)
+        runOnGl { NativeBridge.setElement(e) }
     }
 
     private fun toggleExtend() {
         extendOn = !extendOn
         val v = extendOn
-        styleChip(extendChip, v)
+        tAdd?.setActive(v)
         runOnGl { NativeBridge.setExtend(v) }
     }
 
-    // ------------------------------------------------------------------ info overlay
+    // ------------------------------------------------------------------ live numbers
 
-    private fun renderInfo() {
-        infoText.text = listOf(headerLine, glLine, statsLine, messageLine)
-            .filter { it.isNotEmpty() }
-            .joinToString("\n")
+    /** [info] = "V F Edges T Sel Undo" (numbers separated by spaces) from the C++ core. */
+    private fun applyInfo(info: String) {
+        val p = info.trim().split(' ')
+        if (p.size < 6) return
+        valueV.text = p[0]
+        valueF.text = p[1]
+        valueE.text = p[2]
+        statusText.text = getString(R.string.status_fmt, p[0], p[1], p[4], p[5])
     }
 
-    private fun showMessage(msg: String) {
-        messageLine = msg
-        renderInfo()
+    private fun toast(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** Runs [block] on the GL thread, redraws, then refreshes the vertex/face counts on screen. */
+    /** Runs [block] on the GL thread, redraws, then refreshes the numbers on screen. */
     private fun runOnGl(block: () -> Unit) {
         if (!NativeBridge.ok) return
         glView.queueEvent {
             block()
-            val stats = NativeBridge.stats()
-            this@MainActivity.runOnUiThread {
-                statsLine = stats
-                renderInfo()
-            }
+            val info = NativeBridge.meshInfo()
+            this@MainActivity.runOnUiThread { applyInfo(info) }
         }
         glView.requestRender()
     }
@@ -325,7 +470,7 @@ class MainActivity : Activity() {
 
     private fun loadGlbFromUri(uri: Uri) {
         if (!NativeBridge.ok) return
-        showMessage(getString(R.string.msg_loading))
+        toast(getString(R.string.msg_loading))
         val name = displayName(uri)
         Thread {
             val bytes: ByteArray? = try {
@@ -334,7 +479,7 @@ class MainActivity : Activity() {
                 null
             }
             if (bytes == null) {
-                runOnUiThread { showMessage(getString(R.string.msg_read_failed)) }
+                runOnUiThread { toast(getString(R.string.msg_read_failed)) }
             } else {
                 glView.queueEvent {
                     val err = try {
@@ -342,11 +487,11 @@ class MainActivity : Activity() {
                     } catch (t: Throwable) {
                         t.toString()
                     }
-                    val stats = NativeBridge.stats()
+                    val info = NativeBridge.meshInfo()
                     runOnUiThread {
-                        statsLine = stats
-                        messageLine = if (err.isEmpty()) name else "Error: $err"
-                        renderInfo()
+                        applyInfo(info)
+                        if (err.isEmpty()) toast(name)
+                        else Toast.makeText(this, "Error: $err", Toast.LENGTH_LONG).show()
                     }
                 }
                 glView.requestRender()

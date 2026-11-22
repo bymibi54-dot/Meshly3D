@@ -6,10 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: Meshly3D
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,5 +44,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Meshly3D-debug-apk
-          path: Meshly3D/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
