@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meshly3D</string>
+    <string name="btn_open">فتح GLB</string>
+    <string name="btn_cube">مكعب</string>
+    <string name="btn_frame">توسيط</string>
+    <string name="msg_loading">جارٍ التحميل…</string>
+    <string name="msg_read_failed">تعذّرت قراءة الملف</string>
+    <string name="msg_cube">المكعب الافتراضي</string>
+</resources>

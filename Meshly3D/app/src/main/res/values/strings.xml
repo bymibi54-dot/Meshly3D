@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meshly3D</string>
+    <string name="btn_open">Open GLB</string>
+    <string name="btn_cube">Cube</string>
+    <string name="btn_frame">Frame</string>
+    <string name="msg_loading">Loading…</string>
+    <string name="msg_read_failed">Could not read the file</string>
+    <string name="msg_cube">Default cube</string>
+</resources>
