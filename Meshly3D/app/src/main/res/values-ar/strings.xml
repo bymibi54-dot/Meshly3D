@@ -7,4 +7,21 @@
     <string name="msg_loading">جارٍ التحميل…</string>
     <string name="msg_read_failed">تعذّرت قراءة الملف</string>
     <string name="msg_cube">المكعب الافتراضي</string>
+
+    <string name="mode_object">مجسم</string>
+    <string name="mode_edit">تعديل</string>
+    <string name="elem_vertex">نقطة</string>
+    <string name="elem_edge">حافة</string>
+    <string name="elem_face">وجه</string>
+    <string name="method_tap">لمس</string>
+    <string name="method_box">مربع</string>
+    <string name="method_lasso">لاسو</string>
+    <string name="sel_add">إضافة</string>
+    <string name="tool_move">تحريك</string>
+    <string name="tool_rotate">تدوير</string>
+    <string name="tool_scale">تكبير</string>
+    <string name="act_undo">تراجع</string>
+    <string name="act_redo">إعادة</string>
+    <string name="sel_all">الكل</string>
+    <string name="sel_none">لا شيء</string>
 </resources>

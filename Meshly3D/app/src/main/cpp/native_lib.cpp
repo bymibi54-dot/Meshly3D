@@ -64,4 +64,38 @@ JNIEXPORT jstring JNICALL Java_com_meshly3d_app_NativeBridge_glInfo(JNIEnv* env,
     return toJString(env, g_renderer.info());
 }
 
+
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setEditMode(JNIEnv*, jobject, jboolean on) {
+    g_renderer.setEditMode(on != 0);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setElement(JNIEnv*, jobject, jint e) {
+    g_renderer.setElement(e);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setMethod(JNIEnv*, jobject, jint m) {
+    g_renderer.setMethod(m);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setExtend(JNIEnv*, jobject, jboolean on) {
+    g_renderer.setExtend(on != 0);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setTool(JNIEnv*, jobject, jint t) {
+    g_renderer.setTool(t);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_undo(JNIEnv*, jobject) { g_renderer.undo(); }
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_redo(JNIEnv*, jobject) { g_renderer.redo(); }
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_selectAll(JNIEnv*, jobject) { g_renderer.selectAll(); }
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_selectNone(JNIEnv*, jobject) { g_renderer.selectNone(); }
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_setDensity(JNIEnv*, jobject, jfloat d) {
+    g_renderer.setDensity(d);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_touchDown(JNIEnv*, jobject, jfloat x, jfloat y) {
+    g_renderer.touchDown(x, y);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_touchMove(JNIEnv*, jobject, jfloat x, jfloat y) {
+    g_renderer.touchMove(x, y);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_touchUp(JNIEnv*, jobject, jfloat x, jfloat y) {
+    g_renderer.touchUp(x, y);
+}
+JNIEXPORT void JNICALL Java_com_meshly3d_app_NativeBridge_touchCancel(JNIEnv*, jobject) { g_renderer.touchCancel(); }
+
 }  // extern "C"

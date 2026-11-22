@@ -18,6 +18,8 @@ static int g_fail = 0;
         }                                                            \
     } while (0)
 
+#include "edit_tests.h"
+
 static bool readFile(const std::string& path, std::vector<uint8_t>& out) {
     std::ifstream f(path, std::ios::binary);
     if (!f) return false;
@@ -122,6 +124,9 @@ int main(int argc, char** argv) {
         }
         std::printf("fuzz: %d of 400 damaged files still loaded (fine)\n", ok);
     }
+
+    // 7. editing core (selection, picking, gizmo, undo)
+    edit_tests::runEditTests(torus);
 
     if (g_fail) {
         std::printf("%d CHECK(S) FAILED\n", g_fail);

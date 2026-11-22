@@ -14,6 +14,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -26,6 +27,14 @@ class MainActivity : Activity() {
     private lateinit var infoText: TextView
     private lateinit var reportScroll: ScrollView
     private lateinit var reportText: TextView
+    private lateinit var editScroll: HorizontalScrollView
+
+    private lateinit var modeChips: List<Button>
+    private lateinit var elemChips: List<Button>
+    private lateinit var methodChips: List<Button>
+    private lateinit var toolChips: List<Button>
+    private lateinit var extendChip: Button
+    private var extendOn = false
 
     // Lines of the info overlay (top-left).
     private var headerLine = ""
@@ -37,7 +46,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         CrashHandler.install(this)
 
-        headerLine = "Meshly3D M1 · Android ${Build.VERSION.RELEASE} · ${Build.SUPPORTED_ABIS.firstOrNull() ?: "?"}"
+        headerLine = "Meshly3D M2 · Android ${Build.VERSION.RELEASE} · ${Build.SUPPORTED_ABIS.firstOrNull() ?: "?"}"
 
         glView = MeshGLView(this)
         infoText = TextView(this).apply {
@@ -61,24 +70,72 @@ class MainActivity : Activity() {
             addView(reportText)
         }
 
-        // Bottom bar: Open GLB | Cube | Frame
-        val bar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(0xFF1A1A1F.toInt())
-            setPadding(8, 8, 8, 8)
+        // ---------------------------------------------------------------- bottom bars
+        // Row 1 (Edit mode only): what to select, how to select, which tool.
+        val editRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val elemList = listOf(
+            chip(R.string.elem_vertex) { setElement(0) },
+            chip(R.string.elem_edge) { setElement(1) },
+            chip(R.string.elem_face) { setElement(2) }
+        )
+        val methodList = listOf(
+            chip(R.string.method_tap) { setMethod(0) },
+            chip(R.string.method_box) { setMethod(1) },
+            chip(R.string.method_lasso) { setMethod(2) }
+        )
+        extendChip = chip(R.string.sel_add) { toggleExtend() }
+        val toolList = listOf(
+            chip(R.string.tool_move) { setTool(0) },
+            chip(R.string.tool_rotate) { setTool(1) },
+            chip(R.string.tool_scale) { setTool(2) }
+        )
+        elemChips = elemList
+        methodChips = methodList
+        toolChips = toolList
+        for (b in elemList) addChip(editRow, b)
+        addSpacer(editRow)
+        for (b in methodList) addChip(editRow, b)
+        addChip(editRow, extendChip)
+        addSpacer(editRow)
+        for (b in toolList) addChip(editRow, b)
+        addSpacer(editRow)
+        addChip(editRow, chip(R.string.sel_all) { runOnGl { NativeBridge.selectAll() } })
+        addChip(editRow, chip(R.string.sel_none) { runOnGl { NativeBridge.selectNone() } })
+        editScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            visibility = View.GONE
+            addView(editRow)
         }
-        fun addButton(textRes: Int, action: () -> Unit) {
-            val b = Button(this)
-            b.setText(textRes)
-            b.setOnClickListener { action() }
-            bar.addView(b, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-        }
-        addButton(R.string.btn_open) { openGlbPicker() }
-        addButton(R.string.btn_cube) {
+
+        // Row 2 (always): mode, undo / redo, file and camera actions.
+        val actionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val modeList = listOf(
+            chip(R.string.mode_object) { setEditMode(false) },
+            chip(R.string.mode_edit) { setEditMode(true) }
+        )
+        modeChips = modeList
+        for (b in modeList) addChip(actionRow, b)
+        addSpacer(actionRow)
+        addChip(actionRow, chip(R.string.act_undo) { runOnGl { NativeBridge.undo() } })
+        addChip(actionRow, chip(R.string.act_redo) { runOnGl { NativeBridge.redo() } })
+        addSpacer(actionRow)
+        addChip(actionRow, chip(R.string.btn_open) { openGlbPicker() })
+        addChip(actionRow, chip(R.string.btn_cube) {
             runOnGl { NativeBridge.resetCube() }
             showMessage(getString(R.string.msg_cube))
+        })
+        addChip(actionRow, chip(R.string.btn_frame) { runOnGl { NativeBridge.frame() } })
+        val actionScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(actionRow)
         }
-        addButton(R.string.btn_frame) { runOnGl { NativeBridge.frame() } }
+
+        val bottom = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xFF1A1A1F.toInt())
+            addView(editScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            addView(actionScroll, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        }
 
         val root = FrameLayout(this)
         root.addView(glView, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
@@ -86,7 +143,7 @@ class MainActivity : Activity() {
             infoText,
             FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.TOP or Gravity.START)
         )
-        root.addView(bar, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT, Gravity.BOTTOM))
+        root.addView(bottom, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT, Gravity.BOTTOM))
         root.addView(reportScroll, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(root)
 
@@ -120,7 +177,95 @@ class MainActivity : Activity() {
         })
         // Draw only when something changes (no animation, saves battery).
         glView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        glView.onGestureEnd = { runOnGl { } }   // refresh the counters after every gesture
+
+        // Initial state (Object mode, vertex select, tap, move tool).
+        val density = resources.displayMetrics.density
+        select(modeChips, 0)
+        select(elemChips, 0)
+        select(methodChips, 0)
+        select(toolChips, 0)
+        styleChip(extendChip, false)
+        runOnGl {
+            NativeBridge.setDensity(density)
+            NativeBridge.setEditMode(false)
+            NativeBridge.setElement(0)
+            NativeBridge.setMethod(0)
+            NativeBridge.setExtend(false)
+            NativeBridge.setTool(0)
+        }
     }
+
+    // ------------------------------------------------------------------ small UI helpers
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun styleChip(b: Button, active: Boolean) {
+        b.setBackgroundColor(if (active) 0xFF3A6EA5.toInt() else 0xFF2A2A30.toInt())
+    }
+
+    private fun chip(textRes: Int, onClick: () -> Unit): Button {
+        val b = Button(this)
+        b.setText(textRes)
+        b.isAllCaps = false
+        b.textSize = 12f
+        b.minWidth = 0
+        b.minimumWidth = 0
+        b.minHeight = 0
+        b.minimumHeight = 0
+        b.setPadding(dp(14), dp(6), dp(14), dp(6))
+        b.stateListAnimator = null
+        b.setTextColor(0xFFFFFFFF.toInt())
+        b.setOnClickListener { onClick() }
+        styleChip(b, false)
+        return b
+    }
+
+    private fun addChip(row: LinearLayout, b: Button) {
+        val lp = LinearLayout.LayoutParams(WRAP_CONTENT, dp(40))
+        lp.setMargins(dp(3), dp(3), dp(3), dp(3))
+        row.addView(b, lp)
+    }
+
+    private fun addSpacer(row: LinearLayout) {
+        row.addView(View(this), LinearLayout.LayoutParams(dp(10), dp(1)))
+    }
+
+    private fun select(group: List<Button>, index: Int) {
+        group.forEachIndexed { i, b -> styleChip(b, i == index) }
+    }
+
+    // ------------------------------------------------------------------ editing controls
+
+    private fun setEditMode(on: Boolean) {
+        editScroll.visibility = if (on) View.VISIBLE else View.GONE
+        select(modeChips, if (on) 1 else 0)
+        runOnGl { NativeBridge.setEditMode(on) }
+    }
+
+    private fun setElement(e: Int) {
+        select(elemChips, e)
+        runOnGl { NativeBridge.setElement(e) }
+    }
+
+    private fun setMethod(m: Int) {
+        select(methodChips, m)
+        runOnGl { NativeBridge.setMethod(m) }
+    }
+
+    private fun setTool(t: Int) {
+        select(toolChips, t)
+        runOnGl { NativeBridge.setTool(t) }
+    }
+
+    private fun toggleExtend() {
+        extendOn = !extendOn
+        val v = extendOn
+        styleChip(extendChip, v)
+        runOnGl { NativeBridge.setExtend(v) }
+    }
+
+    // ------------------------------------------------------------------ info overlay
 
     private fun renderInfo() {
         infoText.text = listOf(headerLine, glLine, statsLine, messageLine)
