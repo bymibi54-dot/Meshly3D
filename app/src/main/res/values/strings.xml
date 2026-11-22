@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Meshly3D</string>
-    <string name="gl_info_fmt">%1$s</string>
+    <string name="btn_open">Open GLB</string>
+    <string name="btn_cube">Cube</string>
+    <string name="btn_frame">Frame</string>
+    <string name="msg_loading">Loading…</string>
+    <string name="msg_read_failed">Could not read the file</string>
+    <string name="msg_cube">Default cube</string>
+
+    <string name="mode_object">Object</string>
+    <string name="mode_edit">Edit</string>
+    <string name="elem_vertex">Vertex</string>
+    <string name="elem_edge">Edge</string>
+    <string name="elem_face">Face</string>
+    <string name="method_tap">Tap</string>
+    <string name="method_box">Box</string>
+    <string name="method_lasso">Lasso</string>
+    <string name="sel_add">Add</string>
+    <string name="tool_move">Move</string>
+    <string name="tool_rotate">Rotate</string>
+    <string name="tool_scale">Scale</string>
+    <string name="act_undo">Undo</string>
+    <string name="act_redo">Redo</string>
+    <string name="sel_all">All</string>
+    <string name="sel_none">None</string>
 </resources>
