@@ -1,10 +1,14 @@
-name: Android build (M0)
+name: Android build
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: Meshly3D
 
 jobs:
   build:
@@ -17,6 +21,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Unit tests (GLB loader + Mesh, host C++ with sanitizers)
+        run: |
+          g++ -std=c++17 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -Wall -Wextra \
+            -Iapp/src/main/cpp tests/loader_test.cpp app/src/main/cpp/mesh.cpp app/src/main/cpp/glb_loader.cpp \
+            -o loader_test
+          ./loader_test samples
 
       - name: Install Android SDK parts (platform, build-tools, NDK, CMake)
         run: |
@@ -37,5 +48,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Meshly3D-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: Meshly3D/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
